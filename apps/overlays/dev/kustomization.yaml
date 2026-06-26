@@ -8,6 +8,75 @@ resources:
   - ../../base
   - azure-key-vault-secret-store.yaml
 
+# Dev cluster runs a single, general-purpose node pool — it does NOT have the
+# dedicated, tainted perf node pools (np=pixel_smart / fdaparser / shadowgram)
+# used by octave-perf-aks. These patches make the perf-oriented services
+# schedulable on the default nodes:
+#   - drop the nodeSelector that pins them to missing node pools
+#   - shrink the perf-sized CPU/memory requests to dev-sized values
+#   - run a single pixelsmart replica (the HPA pins 12 for load testing)
+# Tolerations are left in place; they are harmless on untainted nodes.
+patches:
+  # Only one pixelsmart pod in dev (base HPA pins min=max=12 for perf runs).
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: octave-pixelsmart-generation-webapi
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 1
+
+  - target:
+      kind: Deployment
+      name: octave-pixelsmart-generation-webapi
+    patch: |
+      - op: remove
+        path: /spec/template/spec/nodeSelector
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "500m"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+
+  - target:
+      kind: Deployment
+      name: octave-fdaparser-webapi
+    patch: |
+      - op: remove
+        path: /spec/template/spec/nodeSelector
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "250m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+
+  - target:
+      kind: Deployment
+      name: octave-shadowgram-webapi
+    patch: |
+      - op: remove
+        path: /spec/template/spec/nodeSelector
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "250m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+
 # Image pins for the dev/review cluster.
 #
 # The base manifests reference ":latest" tags from the dev ACR so the cluster is
