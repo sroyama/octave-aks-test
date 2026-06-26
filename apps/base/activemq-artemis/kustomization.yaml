@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: octave
+
+resources:
+- helmrelease.yaml
+- artemis-data-pvc.yaml
+
+configMapGenerator:
+- name: activemq-artemis-helm-values
+  namespace: octave
+  files:
+  - values.yaml=helm-values.yaml
+
+- name: activemq-artemis-helm-values-override
+  namespace: octave
+  files:
+  - values.yaml=helm-values-override.yaml
+
+configurations:
+- helmrelease-values-from.yaml

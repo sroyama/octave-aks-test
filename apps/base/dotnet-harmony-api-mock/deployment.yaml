@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-harmony-api-mock
+  labels:
+    app: dotnet-harmony-api-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dotnet-harmony-api-mock
+  template:
+    metadata:
+      labels:
+        app: dotnet-harmony-api-mock
+    spec:
+      imagePullSecrets:
+      - name: acrdevglobal-regcred
+      containers:
+      - name: dotnet-harmony-api-mock
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockharmonyapi-webapi:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: ASPNETCORE_URLS
+          value: "http://+:5000"
+        - name: TopconDicomWebClientOptions__ServerUrl
+          value: "http://pacs-arc-service:8080/"
+        - name: TopconDicomWebClientOptions__RestApiRootPath
+          value: "dcm4chee-arc/aets/DCM4CHEE/rs"
+        - name: TopconDicomWebClientOptions__Username
+          value: "demo"
+        - name: TopconDicomWebClientOptions__Password
+          value: "demo"
+        - name: TopconDicomWebClientOptions__CacheDicomInstances
+          value: "true"
+        - name: MongoDb__ConnectionString
+          value: "mongodb://mongodb:27017/?retryWrites=true"
+        - name: MongoDb__DatabaseName
+          value: "mockHarmony"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 512Mi

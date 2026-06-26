@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-rdb-webapi
+  labels:
+    app: octave-rdb-webapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octave-rdb-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-rdb-webapi
+    spec:
+      containers:
+      - name: octave-rdb-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-rdb-webapi-debug:latest
+        ports:
+          - containerPort: 5000
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Development"
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+

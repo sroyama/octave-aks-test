@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: haproxy-ingress
+  namespace: oct-gitops-ns
+spec:
+  interval: 24h
+  url: https://haproxy-ingress.github.io/charts

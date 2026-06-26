@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: octave
+
+resources:
+- mssql
+- keycloak-deployment.yaml
+- keycloak-init-job.yaml
+- keycloak-secret-es.yaml
+- keycloak-service.yaml
+
+labels:
+  - pairs:
+      octave-component: keycloak
+
+configMapGenerator:
+- name: keycloak-init-script
+  files:
+  - init-keycloak.sh=init-keycloak.sh

@@ -1,0 +1,35 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: octave-pixelsmart-generation-webapi
+  labels:
+    app: octave-pixelsmart-generation-webapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: octave-pixelsmart-generation-webapi
+  minReplicas: 12
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 10
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      selectPolicy: Max
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 60

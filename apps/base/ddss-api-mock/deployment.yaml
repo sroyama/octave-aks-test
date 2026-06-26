@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ddss-api-mock
+  labels:
+    app: ddss-api-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ddss-api-mock
+  template:
+    metadata:
+      labels:
+        app: ddss-api-mock
+    spec:
+      imagePullSecrets:
+      - name: acrdevglobal-regcred
+      containers:
+      - name: ddss-api-mock
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockddss-webapi:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: ASPNETCORE_URLS
+          value: "http://+:5000"
+        - name: MongoDb__ConnectionString
+          value: "mongodb://mongodb:27017/?retryWrites=true"
+        - name: MongoDb__DatabaseName
+          value: "mockDdss"
+        - name: DicomServer__ServerUrl
+          value: "http://pacs-arc-service:8080/"
+        - name: DicomServer__RestApiRootPath
+          value: "dcm4chee-arc/aets/DCM4CHEE/rs"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 512Mi

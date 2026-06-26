@@ -1,0 +1,28 @@
+# Based on: https://external-secrets.io/latest/guides/common-k8s-secret-types/
+# and https://external-secrets.io/latest/provider/azure-key-vault/
+
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: octave-topconapp-tls-es
+  namespace: octave
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    kind: SecretStore
+    name: azure-key-vault-secret-store
+
+  target:
+    name: octave-topconapp-tls
+    template:
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ .tls | b64dec | pkcs12cert }}"
+        tls.key: "{{ .tls | b64dec | pkcs12key }}"
+    creationPolicy: Owner
+
+  data:
+  - secretKey: tls
+    remoteRef:
+      # Azure Key Vault certificates must be fetched as secret/cert-name
+      key: secret/Topconapp2025

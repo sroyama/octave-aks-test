@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pacs-pg
+spec:
+  selector:
+    matchLabels:
+      app: pacs-pg
+  serviceName: pacs-pg-service
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pacs-pg
+    spec:
+      containers:
+      - name: db
+        image: dcm4che/postgres-dcm4chee:14.5-29
+        ports:
+        - containerPort: 5432
+          name: pacs-pg-port
+        env:
+        - name: POSTGRES_DB
+          value: pacsdb
+        envFrom:
+        - secretRef:
+            name: pacs-pg-secret
+        - configMapRef:
+            name: pacs-pg-config          
+        volumeMounts:
+        - name: pacs-pg-data-pvc
+          mountPath: /var/lib/postgresql/data
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: timezone
+          mountPath: /etc/timezone
+          readOnly: true
+      volumes:
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: timezone
+        hostPath:
+          path: /etc/timezone
+  volumeClaimTemplates:
+  - metadata:
+      name: pacs-pg-data-pvc
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

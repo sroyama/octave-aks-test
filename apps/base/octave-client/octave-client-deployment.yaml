@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-client
+  labels:
+    app: octave-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octave-client
+  template:
+    metadata:
+      labels:
+        app: octave-client
+    spec:
+      containers:
+      - name: octave-client-web
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-client-web:latest
+        ports:
+          - containerPort: 80
+        env:
+          - name: OCTAVE_API_URL
+            value: "https://octave-dev.topcon.app/octave"
+          - name: BASE_HREF
+            value: "/octave/"
+          # Demo environment doesn't have auth, it uses oauth2-proxy outside of the app.
+          - name: ENABLE_AUTH
+            value: "false"
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        command: ["/bin/sh", "/entrypoint.sh"]
+        volumeMounts:
+          - name: entrypoint-script-volume
+            mountPath: "/entrypoint.sh"
+            subPath: "entrypoint.sh"
+      volumes:
+        - name: entrypoint-script-volume
+          configMap:
+            name: octave-client-entrypoint

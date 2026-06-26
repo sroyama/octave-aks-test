@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-appdata-webapi
+  labels:
+    app: octave-appdata-webapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octave-appdata-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-appdata-webapi
+    spec:
+      # Note: This is meant to be run with 1 replica. Not tested with more than 1 replica.
+      initContainers:
+      - name: octave-appdata-init
+        image: mongo:7.0.16
+        command: ["bash", "-c"]
+        args:
+          - |
+            echo "Starting MongoDB/Cosmos DB initialization..."
+
+            # Wait for the shared mongodb service to accept connections.
+            until mongosh "$MONGODB_CONNECTION_STRING" --quiet --eval 'db.adminCommand("ping")' >/dev/null 2>&1; do
+              echo "Waiting for mongodb to be ready..."
+              sleep 5
+            done
+
+            # Get database name from environment variable
+            export DB_NAME="$DATABASE_NAME"
+            
+            # Run initialization script
+            mongosh "$MONGODB_CONNECTION_STRING" --eval '
+              const dbName = "'$DB_NAME'";
+              const db = db.getSiblingDB(dbName);
+              
+              try {
+                // Check if collections already exist by looking for key collections
+                const collections = ["octAppData", "trendAppData", "auditLog"];
+                const existingCollections = db.getCollectionNames();
+                
+                // If we find at least one of our expected collections, assume initialization was done
+                const alreadyInitialized = collections.some(collection => 
+                  existingCollections.includes(collection)
+                );
+                
+                if (alreadyInitialized) {
+                  print("Collections already exist. Skipping initialization.");
+                  exit(0);
+                }
+                
+                print("Initializing database " + dbName + "...");
+                
+                // Create collections
+                collections.forEach(collName => {
+                  try {
+                    print("Creating collection: " + collName);
+                    db.createCollection(collName);
+                    print("Collection created: " + collName);
+                  } catch (e) {
+                    if (e.codeName === "NamespaceExists") {
+                      print("Collection " + collName + " already exists");
+                    } else {
+                      print("Error creating " + collName + ": " + e.message);
+                      exit(1);
+                    }
+                  }
+                });
+                
+                // Create indexes
+                print("Creating indexes...");
+                db.octAppData.createIndex({ "dicomUid.studyInstanceUid": 1, "dicomUid.seriesInstanceUid": 1, "dicomUid.sopInstanceUid": 1 }, { unique: true });
+                db.trendAppData.createIndex({ patientUuid: 1 }, { unique: true });
+                db.auditLog.createIndex({ timestamp: -1 });
+                db.auditLog.createIndex({ user: 1, timestamp: -1 });
+                
+                print("Database initialization completed successfully");
+              } catch (e) {
+                print("Error during initialization: " + e.message);
+                exit(1);
+              }
+            '
+            echo "MongoDB/Cosmos DB initialization finished"
+        env:
+          - name: MONGODB_CONNECTION_STRING
+            value: "mongodb://mongodb:27017/?retryWrites=true"
+          - name: DATABASE_NAME
+            value: "octaveAppDB"
+      containers:
+      - name: octave-appdata-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octaveappdata-webapi-debug:latest
+        ports:
+          - containerPort: 5000
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Development"
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+          - name: DatabaseOptions__DatabaseName
+            value: "octaveAppDB"
+          - name: DatabaseOptions__ConnectionString
+            value: "mongodb://mongodb:27017/?retryWrites=true"

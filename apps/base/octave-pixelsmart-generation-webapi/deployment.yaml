@@ -1,0 +1,244 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-pixelsmart-generation-webapi
+  labels:
+    app: octave-pixelsmart-generation-webapi
+spec:
+  # Disable surge on RollingUpdate strategy to avoid over-provisioning pods during rollout,
+  # If surge is not disabled, pods maybe over provisioned during rollout and get stuck in pending
+  # state, which would cause Kubernetes to be in a stuck in a stalemate situation where it can't
+  # make progress on the rollout or scale up/down the deployment,
+  # which is a problem given the resource requests/limits and node pool capacity. For example,
+  # with max surge of 25%, up to 4 additional pods may be created during rollout, which would
+  # exceed the capacity of the node pool.
+  #
+  # For now using Recreate since we need to be able to provision nodes with higher limits as 
+  # needed.
+  strategy:
+    type: Recreate
+    # type: RollingUpdate
+    # rollingUpdate:
+    #   maxSurge: 0
+    #   maxUnavailable: 2
+  selector:
+    matchLabels:
+      app: octave-pixelsmart-generation-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-pixelsmart-generation-webapi
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
+    spec:
+      imagePullSecrets:
+        - name: acrdevglobal-regcred
+      nodeSelector:
+        np: pixel_smart
+      tolerations:
+      - key: "pixel_smartonly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      # Spread pods evenly across nodes.
+      # maxSkew:1 means the pod count difference between any two nodes is at most 1.
+      # DoNotSchedule = hard constraint; pods stay Pending rather than bunching up.
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: octave-pixelsmart-generation-webapi
+      containers:
+      - name: octave-pixelsmart-generation-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-pixelsmartq-generation-webapi:1.1.14503-2026-02-02-43c8193-main # {"$imagepolicy": "flux-system:octave-pixelsmart-generation-webapi:tag"}
+        ports:
+          - name: http
+            containerPort: 5000
+        # startupProbe:
+        #   httpGet:
+        #     path: /healthz/live
+        #     port: 5000
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 10
+        #   failureThreshold: 30 # 10 x 30 = up to 5 minutes startup time, adjust as necessary
+        # livenessProbe:
+        #   httpGet:
+        #     path: /healthz/live
+        #     port: 5000
+        #   periodSeconds: 15
+        #   failureThreshold: 3
+        # readinessProbe:
+        #   httpGet:
+        #     path: /healthz/ready
+        #     port: 5000
+        #   periodSeconds: 20
+        #   failureThreshold: 3
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+
+          - name: Metrics__Enabled
+            value: "true"
+
+          - name: Authentication__Enabled
+            value: "false"
+          - name: JwtBearerOptions__Authority
+            value: "http://keycloak-svc:8088/realms/octave-realm"
+          - name: JwtBearerOptions__ValidIssuer
+            value: "http://keycloak-svc:8088/realms/octave-realm"
+          - name: JwtBearerOptions__RequireHttpsMetadata
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuer
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateAudience
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateLifetime
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuerSigningKey
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ClockSkew
+            value: "00:00:30"
+          
+          - name: ClaimAuthorizationOptions__LogClaimsForDebug
+            value: "false"
+          - name: ClaimAuthorizationOptions__Policies__CreatePixelSmartPolicy__Type
+            value: "scope"
+          - name: ClaimAuthorizationOptions__Policies__CreatePixelSmartPolicy__Value
+            value: "octave:pixelsmart:write"
+          
+          - name: TokenServiceOptions__TokenEndPointUrl
+            value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
+          - name: TokenServiceOptions__ClientId
+            value: "jobqueue-ddss"
+          - name: TokenServiceOptions__ClientSecret
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-secret
+                key: JOBQUEUE_DDSS_CLIENT_SECRET
+          - name: TokenServiceOptions__Scope
+            value: "ddss:data:write" # Using "write" instead of "read" for now since that's what's in the keycloak.
+
+          - name: ArtemisAmqpOptions__Protocol
+            value: "amqp"
+          - name: ArtemisAmqpOptions__Host
+            value: "activemq-artemis"
+          - name: ArtemisAmqpOptions__Port
+            value: "5672"
+          - name: ArtemisAmqpOptions__Username
+            value: ""
+          - name: ArtemisAmqpOptions__Password
+            value: ""
+          - name: ArtemisAmqpOptions__AddressName
+            value: "PixelSmartQueueAddress"
+          - name: ArtemisAmqpOptions__Durable
+            value: "2"
+
+          - name: PixelSmartConsumerServiceOptions__RetryDelaySeconds
+            value: "5"
+          - name: PixelSmartConsumerServiceOptions__ReceiveTimeoutSeconds
+            value: "5"
+
+          - name: TopconDicomWebClientOptions__ServerUrl
+            value: "http://pacs-arc-service:8080/"
+          - name: TopconDicomWebClientOptions__RestApiRootPath
+            value: "dcm4chee-arc/aets/DCM4CHEE/rs"
+          - name: TopconDicomWebClientOptions__Username
+            value: "demo"
+          - name: TopconDicomWebClientOptions__Password
+            value: "demo"
+
+          - name: DdssApiOptions__EntriesBaseUrl
+            value: "http://ddss-api-mock:5000/dds/data/v1/entries/"
+          - name: DdssApiOptions__SchemasBaseUrl
+            value: "http://ddss-api-mock:5000/dds/schema/v1/schemas/"
+
+          - name: PixelSmartServiceOptions__UseGPU
+            value: "false"
+
+          - name: SkipDicomValidation
+            value: "false"
+
+          - name: DicomWebClient__Implementation
+            value: "PACS"
+
+          - name: HarmonyApiOptions__BaseUrl
+            value: "http://imagingplatform:10001/api/v2/"
+
+
+
+
+
+          - name: ArtemisAmqpOptions__ReceiverLinkCredit
+            value: "3"
+
+          - name: PixelSmartConsumerServiceOptions__MaxParallelTasks
+            value: "3"
+
+
+          - name: MemoryCacheSizeLimit
+            value: "1"
+
+          - name: TopconDicomWebClientOptions__CacheDicomInstances
+            value: "false"
+
+          - name: FdaServiceOptions__CacheDicomAndFdaData
+            value: "false"
+
+          - name: HarmonyDicomWebClientOptions__CacheDicomInstances
+            value: "false"
+
+
+          # - name: DOTNET_GCDynamicAdaptationMode
+          #   value: "1" # Enable dynamic adaptation mode. Note that this is enabled by default starting with .NET 9.
+          # - name: DOTNET_GCConserveMemory
+          #   value: "9"
+          # - name: DOTNET_gcServer
+          #   value: "0"  # Switches to Workstation GC instead of Server GC, which uses single unified heap.
+
+          # # Try adding some OpenMP environment variables to see if it helps with performance, especially for high core count scenarios.
+          # - name: OMP_DISPLAY_AFFINITY
+          #   value: "true"
+          - name: OMP_DISPLAY_ENV
+            value: "true"
+          # - name: OMP_NUM_THREADS
+          #   value: "4"
+          # - name: OMP_THREAD_LIMIT
+          #   value: "6"
+          # # - name: OMP_PROC_BIND
+          # #   value: "true"
+          # - name: OMP_DYNAMIC
+          #   value: "true"
+
+          # - name: OPJ_NUM_THREADS
+          #   value: "ALL_CPUS"
+
+
+          # Temporary unused variable to force pods to be recreated on deployment updates.
+          - name: TryForceRecreate
+            value: "false"
+
+        resources:
+          requests:
+            cpu: "15000m"
+            memory: "24576Mi"
+          limits:
+            cpu: "15000m"
+            memory: "24576Mi"
+
+        # For an "empty" D32als, about 30881m cores and 59141Mi memory are available, so setting requests just under that to leave some buffer for system processes and potential resource usage spikes.
+        # Adjust as needed for other node sizes.
+        # resources:
+        #   requests:
+        #     cpu: "30" # Leaves a safe ~0.88 vCPU buffer for system spikes/updates
+        #     memory: "52Gi" # Leaves a ~4 GB buffer to safely absorb Azure Monitor or CSI driver bursts
+          # limits:
+          #   cpu: "30"
+          #   memory: "52Gi"
+
+

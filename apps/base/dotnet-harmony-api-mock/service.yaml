@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-harmony-api-mock
+  labels:
+    app: dotnet-harmony-api-mock
+spec:
+  selector:
+    app: dotnet-harmony-api-mock
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP

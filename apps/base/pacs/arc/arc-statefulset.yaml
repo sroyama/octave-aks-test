@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pacs-arc
+spec:
+  selector:
+    matchLabels:
+      app: pacs-arc
+  serviceName: "pacs-arc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pacs-arc
+    spec:
+      containers:
+      - name: dcm4chee-arc
+        image: dcm4che/dcm4chee-arc-psql:5.29.2
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        - containerPort: 9990
+          name: admin
+        - containerPort: 9993
+          name: admin-https
+        - containerPort: 11112
+          name: dicom
+        - containerPort: 2762
+          name: dicom-tls
+        - containerPort: 2575
+          name: hl7
+        - containerPort: 12575
+          name: hl7-tls
+        envFrom:
+        - secretRef:
+            name: pacs-arc-secret
+        - configMapRef:
+            name: pacs-arc-config
+        env:
+        - name: STORAGE_DIR
+          value: "/storage/fs1"
+        volumeMounts:
+        - name: wildfly-data
+          mountPath: /opt/wildfly/standalone
+        - name: storage-data
+          mountPath: /storage
+  volumeClaimTemplates:
+  - metadata:
+      name: wildfly-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+  - metadata:
+      name: storage-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 50Gi

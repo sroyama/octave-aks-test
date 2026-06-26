@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: octave
+
+resources:
+- uimock-deployment.yaml
+- uimock-service.yaml
+- uimock-ingress.yaml
+
+configMapGenerator:
+- name: harmony-ui-mock-config
+  files:
+  - config.json=./data/config.json
+
+labels:
+  - pairs:
+      octave-component: harmony-ui-mock

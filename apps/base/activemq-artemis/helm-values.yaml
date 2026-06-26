@@ -1,0 +1,47 @@
+image:
+  repository: acrdev01global-hudngze7h7hcd6gw.azurecr.io/cdss/activemq-artemis-broker
+  tag: artemis.2.40.0
+imagePullSecrets:
+  - name: acrdevglobal-regcred
+env:
+  AMQ_USER: "admin"
+  AMQ_PASSWORD: "admin"
+  AMQ_EXTRA_ARGS: "--relax-jolokia"
+  TZ: "${environment_timezone:=America/New_York}"
+  AMQ_RESET_CONFIG: "true"
+  ARTEMIS_PASSWORD: "password"
+  ARTEMIS_USERNAME: "artemis"
+ingress:
+  enabled: false
+securityContext:
+  runAsUser: 0
+  runAsGroup: 0
+persistence:
+- name: artemisdata
+  enabled: true
+  existingClaim: artemis-data
+  mountPath: /home/jboss/broker/data
+  subPath: broker-data
+
+livenessProbe:
+  enabled: true
+  tcpSocket:
+    port: 61616
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  enabled: true
+  tcpSocket:
+    port: 61616
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+nodeSelector:
+  agentpool: user

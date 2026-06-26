@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+commonAnnotations:
+  octave-overlay: dev
+
+resources:
+  - ../../base
+  - azure-key-vault-secret-store.yaml
+
+# Image pins for the dev/review cluster.
+#
+# The base manifests reference ":latest" tags from the dev ACR so the cluster is
+# easy to update. Pin specific, reproducible tags here when you need a frozen
+# build. Example (uncomment + set real tags):
+#
+# images:
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-webapi-debug
+#     newTag: 1.1.xxxxx-main
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockharmonyapi-webapi
+#     newTag: latest
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockddss-webapi
+#     newTag: latest

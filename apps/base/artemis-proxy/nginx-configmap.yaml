@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artemis-nginx-proxy-config
+data:
+  nginx.conf: |
+    events {}
+    http {
+      server {
+        listen 8161;
+        location / {
+          proxy_pass http://activemq-artemis:8161;
+        }
+      }
+    }

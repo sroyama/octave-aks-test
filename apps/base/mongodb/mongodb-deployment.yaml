@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0.16
+        # Standalone, no auth — this is a dev/review cluster shared by the mock
+        # services (mockHarmony / mockDdss databases). retryWrites in the client
+        # connection strings is gracefully ignored on a standalone topology.
+        args: ["--bind_ip_all", "--noauth"]
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        readinessProbe:
+          exec:
+            command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+      volumes:
+      - name: mongodb-data
+        persistentVolumeClaim:
+          claimName: mongodb-data

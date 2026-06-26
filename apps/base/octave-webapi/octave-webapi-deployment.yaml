@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-webapi
+  labels:
+    app: octave-webapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octave-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-webapi
+    spec:
+      containers:
+      - name: octave-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-webapi-debug:latest
+        ports:
+          - containerPort: 5000
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Development"
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+          # Demo environment doesn't have auth, it uses oauth2-proxy outside of the app.
+          - name: Authentication__Enabled
+            value: "false"
+          - name: Authentication__Authority
+            value: "http://keycloak:8088/realms/octave-realm"
+          - name: Authentication__ValidIssuer
+            value: "http://keycloak:8088/realms/octave-realm"
+          - name: HarmonyApiTokenServiceOptions__TokenEndPointUrl
+            value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
+          - name: HarmonyApiTokenServiceOptions__ClientId
+            value: "cdss-harmony"
+          - name: HarmonyApiTokenServiceOptions__ClientSecret
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-secret
+                key: CDSS_HARMONY_CLIENT_SECRET
+          - name: HarmonyApiTokenServiceOptions__Scope
+            value: "harmony:access"
+          - name: DdssApiTokenServiceOptions__TokenEndPointUrl
+            value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
+          - name: DdssApiTokenServiceOptions__ClientId
+            value: "cdss-ddss"
+          - name: DdssApiTokenServiceOptions__ClientSecret
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-secret
+                key: CDSS_DDSS_CLIENT_SECRET
+          - name: TopconDicomWebClientOptions__ServerUrl
+            value: "http://pacs-arc-service:8080/"
+          - name: TopconDicomWebClientOptions__RestApiRootPath
+            value: "dcm4chee-arc/aets/DCM4CHEE/rs"
+          - name: TopconDicomWebClientOptions__Username
+            value: "demo"
+          - name: TopconDicomWebClientOptions__Password
+            value: "demo"
+          - name: RdbOptions__AddressUrl
+            value: "http://octave-rdb-webapi-service:5000"
+          - name: RdbOptions__UnsafeUseInsecureChannelCallCredentials
+            value: "true"
+          - name: HarmonyApiOptions__BaseUrl
+            value: "http://dotnet-harmony-api-mock:5000/harmony/api/v2/"
+          - name: DdssApiOptions__EntriesBaseUrl
+            value: "http://ddss-api-mock:5000/dds/data/v1/entries/"
+          - name: DdssApiOptions__SchemasBaseUrl
+            value: "http://ddss-api-mock:5000/dds/schema/v1/schemas/"
+          - name: OctaveAppDataOptions__BaseUrl
+            value: "http://octave-appdata-webapi-service:5000/api/"

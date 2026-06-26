@@ -1,0 +1,32 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: acrdevglobal-secret-es
+  namespace: octave
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    kind: SecretStore
+    name: azure-key-vault-secret-store
+  target:
+    name: acrdevglobal-regcred
+    template:
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: |
+          {
+            "auths": {
+              "acrdev01global-hudngze7h7hcd6gw.azurecr.io": {
+                "username": "{{ .username }}",
+                "password": "{{ .password }}",
+                "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+              }
+            }
+          }
+  data:
+  - secretKey: username
+    remoteRef:
+      key: secret/acrdevglobal-username
+  - secretKey: password
+    remoteRef:
+      key: secret/acrdevglobal-password

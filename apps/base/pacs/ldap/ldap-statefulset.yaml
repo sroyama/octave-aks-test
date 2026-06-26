@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pacs-ldap
+  labels:
+    app: pacs-ldap
+spec:
+  serviceName: pacs-ldap-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pacs-ldap
+  template:
+    metadata:
+      labels:
+        app: pacs-ldap
+    spec:
+      containers:
+        - name: pacs-ldap
+          image: dcm4che/slapd-dcm4chee:2.6.3-29.2
+          ports:
+            - containerPort: 389
+              name: pacs-ldap-port
+          env:
+          - name: STORAGE_DIR
+            value: "/storage/fs1"      
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/openldap/openldap-data
+            - name: conf
+              mountPath: /etc/openldap/slapd.d
+            - name: pacs-ldif-volume
+              mountPath: /etc/openldap/data/update-attributes.ldif
+              subPath: update-attributes.ldif
+      volumes:
+        - name: pacs-ldif-volume
+          configMap:
+            name: pacs-ldap-ldif-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: conf
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

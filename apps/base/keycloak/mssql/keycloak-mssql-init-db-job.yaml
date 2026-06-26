@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-mssql-init-db-job
+spec:
+  # ttlSecondsAfterFinished: 86400 # 1 day - TTLs not supported in Flux. https://github.com/fluxcd/flux2/discussions/2689#discussioncomment-3048445
+  template:
+    spec:
+      containers:
+      - name: keycloak-mssql-init-db
+        image: mcr.microsoft.com/mssql-tools:latest
+        command:
+        - "/bin/bash"
+        - "-c"
+        - |
+          echo "$(date): Starting keycloak database setup job..."
+          attempt=1
+          max_attempts=20
+          sleep_duration=10
+          while true; do
+            echo "$(date): Attempt $attempt of $max_attempts to connect to database and create keycloak DB if needed"
+
+            if /opt/mssql-tools/bin/sqlcmd -S keycloak-mssql-svc -U sa -P "${SA_PASSWORD}" -Q "
+              IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'keycloak')
+              BEGIN
+                PRINT 'Creating keycloak database...'
+                CREATE DATABASE keycloak;
+                PRINT 'Keycloak database created successfully.'
+              END
+              ELSE
+              BEGIN
+                PRINT 'Keycloak database already exists.'
+              END"; then
+              echo "$(date): Database operation completed successfully!"
+              break
+            else
+              echo "$(date): Connection failed or error occurred. Retrying in $sleep_duration seconds..."
+              if [ $attempt -ge $max_attempts ]; then
+                echo "$(date): Maximum attempts reached. Exiting with failure."
+                exit 1
+              fi
+              attempt=$((attempt+1))
+              sleep $sleep_duration
+            fi
+            
+          done
+          echo "$(date): Job completed successfully!"
+        env:
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-mssql-secret
+              key: SA_PASSWORD
+      restartPolicy: OnFailure
+  backoffLimit: 6
+  completions: 1
+  parallelism: 1
+  

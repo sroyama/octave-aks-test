@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: octave
+
+resources:
+- octave-shadowgram-webapi-deployment.yaml
+- octave-shadowgram-webapi-service.yaml
+
+labels:
+  - pairs:
+      octave-component: octave-shadowgram-webapi

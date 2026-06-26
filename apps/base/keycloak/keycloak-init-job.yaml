@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-init-job
+spec:
+  # ttlSecondsAfterFinished: 86400 # 1 day - TTLs not supported in Flux. https://github.com/fluxcd/flux2/discussions/2689#discussioncomment-3048445
+  template:
+    spec:
+      containers:
+      - name: keycloak-init
+        image: alpine:3.21.3
+        command:
+        - /bin/sh 
+        - -c
+        - |
+          apk add --no-cache bash curl jq
+          chmod +x /scripts/init-keycloak.sh
+          /scripts/init-keycloak.sh
+        volumeMounts:
+        - name: init-script
+          mountPath: /scripts
+        env:
+        - name: KEYCLOAK_URL
+          value: http://keycloak-svc:8088
+        - name: KEYCLOAK_REALM_NAME
+          value: octave-realm
+        - name: WAIT_RETRIES
+          value: "30"
+        - name: WAIT_SLEEP_TIME
+          value: "5"
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: ADMIN_USERNAME
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: ADMIN_PASSWORD
+        - name: CLIENT_WEBAPI_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: CLIENT_WEBAPI_SECRET
+        - name: CDSS_HARMONY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: CDSS_HARMONY_CLIENT_SECRET
+        - name: CDSS_DDSS_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: CDSS_DDSS_CLIENT_SECRET
+        - name: JOBQUEUE_DDSS_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: JOBQUEUE_DDSS_CLIENT_SECRET
+      volumes:
+      - name: init-script
+        configMap:
+          name: keycloak-init-script
+          defaultMode: 0755
+      restartPolicy: Never
+  backoffLimit: 0
+  completions: 1
+  parallelism: 1

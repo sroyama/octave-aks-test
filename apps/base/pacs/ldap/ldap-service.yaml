@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pacs-ldap-service
+spec:
+  selector:
+    app: pacs-ldap
+  ports:
+    - protocol: TCP
+      port: 389
+      targetPort: pacs-ldap-port
+  clusterIP: None
+  type: ClusterIP

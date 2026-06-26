@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  selector:
+    matchLabels:
+      app: keycloak
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      # Possible TODO: move the keycloak table creation job into this init container..?
+      initContainers:
+      - name: init-db
+        image: mcr.microsoft.com/mssql-tools:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          max_attempts=30
+          attempt=1
+          until /opt/mssql-tools/bin/sqlcmd -S keycloak-mssql-svc -U sa -P "${SA_PASSWORD}" -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'keycloak') BEGIN CREATE DATABASE keycloak; END"; do
+              if [ $attempt -ge $max_attempts ]; then
+                  echo "SQL Server is not ready after $attempt attempts, exiting." >&2
+                  exit 1
+              fi
+              echo "Attempt $attempt: Waiting for SQL Server to be ready..."
+              attempt=$((attempt+1))
+              sleep 10
+          done
+        env:
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-mssql-secret
+              key: SA_PASSWORD
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:26.0
+        args: ["start-dev"]
+        ports:
+        - containerPort: 8088
+        env:
+        - name: KC_HTTP_PORT
+          value: "8088"
+        - name: KC_DB
+          value: "mssql"
+        - name: KC_DB_URL_HOST
+          value: "keycloak-mssql-svc"
+        - name: KC_DB_URL_DATABASE
+          value: "keycloak"
+        - name: KC_DB_URL_PORT
+          value: "1433"
+        - name: KC_DB_USERNAME
+          value: "sa"
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: DB_PASSWORD
+        - name: KC_DB_URL_PROPERTIES
+          value: ";trustServerCertificate=true"
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: ADMIN_USERNAME
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: ADMIN_PASSWORD
+        readinessProbe:
+          httpGet:
+            path: /realms/master
+            port: 8088
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10

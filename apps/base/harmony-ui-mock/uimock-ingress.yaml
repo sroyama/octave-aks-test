@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: harmony-ui-mock-ingress
+  annotations:
+    haproxy-ingress.github.io/auth-url: "http://oauth2-proxy.octave.svc.cluster.local:4180/oauth2/auth"
+    haproxy-ingress.github.io/auth-signin: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
+    haproxy-ingress.github.io/auth-headers-succeed: "x-auth-request-user,x-auth-request-email"
+spec:
+  ingressClassName: haproxy
+  rules:
+  - host: octave-dev.topcon.app
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: harmony-ui-mock-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - octave-dev.topcon.app
+    secretName: octave-topconapp-tls

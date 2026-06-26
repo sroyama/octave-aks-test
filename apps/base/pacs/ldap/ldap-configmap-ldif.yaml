@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pacs-ldap-ldif-config
+data:
+  update-attributes.ldif: |-
+    # Replace this with the actual content, e.g.:
+    # dn: cn=config
+    # changetype: modify
+    # add: olcAttributeOptions
+    # olcAttributeOptions: { 1 }X-ORIGIN
+    # ... more LDIF content ...

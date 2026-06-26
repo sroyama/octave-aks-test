@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: octave-webapi-service
+  labels:
+    app: octave-webapi
+spec:
+  selector:
+    app: octave-webapi
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP

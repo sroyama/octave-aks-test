@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: import-dcm-files
+spec:
+  # ttlSecondsAfterFinished: 86400 # 1 day - TTLs not supported in Flux. https://github.com/fluxcd/flux2/discussions/2689#discussioncomment-3048445
+  template:
+    spec:
+      containers:
+      - name: import-dcm-files
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-dev-dcm-importer:latest
+        env:
+        - name: RETRY_MAX_COUNT
+          value: "50"
+        - name: DCM_FOLDER
+          value: "/dcm-files"
+        - name: PACS_SERVER
+          value: "pacs-arc-service"
+        - name: PACS_PORT
+          value: "11112"
+        - name: PACS_PORT_WEB
+          value: "8080"
+        - name: AE_TITLE
+          value: "DCM4CHEE"
+        - name: LDAP_SERVER_HOST_URL
+          value: "ldap://pacs-ldap-service:389"
+        - name: SHADOWGRAM_API_URL
+          value: "http://octave-shadowgram-webapi-service:5000"
+        - name: PIXELSMART_API_URL
+          value: "http://octave-pixelsmart-webapi-service:5000"
+      restartPolicy: Never
+  backoffLimit: 0
+  completions: 1
+  parallelism: 1

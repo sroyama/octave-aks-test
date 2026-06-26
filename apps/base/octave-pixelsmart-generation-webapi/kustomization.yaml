@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: octave
+
+resources:
+- deployment.yaml
+- service.yaml
+- hpa.yaml
+
+# patches:
+# - patch: |-
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     metadata:
+#       name: octave-pixelsmart-generation-webapi
+#     spec:
+#       replicas: 0
+
+labels:
+  - pairs:
+      octave-component: octave-pixelsmart-generation-webapi

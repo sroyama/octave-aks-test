@@ -1,0 +1,66 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: octave--activemq-artemis
+spec:
+  releaseName: activemq-artemis
+  interval: 5m
+  targetNamespace: octave
+  chart:
+    spec:
+      chart: activemq-artemis
+      sourceRef:
+        kind: HelmRepository
+        name: acr-helm-charts
+        namespace: octave
+      interval: 60m
+      reconcileStrategy: Revision
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    remediation:
+      remediateLastFailure: false
+  valuesFrom:
+  - kind: ConfigMap
+    name: activemq-artemis-helm-values
+    valuesKey: values.yaml
+  - kind: ConfigMap
+    name: activemq-artemis-helm-values-override
+    optional: true
+    valuesKey: values.yaml
+  postRenderers:
+  - kustomize:
+      patches:
+      - target:
+          version: v1
+          kind: Deployment
+        patch: |
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: not-used
+            spec:
+              strategy:
+                type: Recreate
+      - target:
+          version: v1
+          kind: Deployment
+        patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/command
+            value: ["/bin/sh", "-c"]
+          - op: add
+            path: /spec/template/spec/containers/0/args
+            value: 
+              - |
+                export BROKER_IP="0.0.0.0"
+                
+                # From https://github.com/arkmq-org/activemq-artemis-broker-image/blob/add73378789e29c1fc302b58153c7f1f080dfac1/image.yaml#L59
+                TARGET_SCRIPT="/opt/amq/bin/launch.sh" 
+
+                # Commenting out the line that sets BROKER_IP based on "hostname -I"
+                sed -i 's/^export BROKER_IP=`hostname -I/ # export BROKER_IP=`hostname -I/' $TARGET_SCRIPT
+
+                # Run the script
+                $TARGET_SCRIPT

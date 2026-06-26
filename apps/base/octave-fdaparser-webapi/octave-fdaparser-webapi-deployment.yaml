@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-fdaparser-webapi
+  labels:
+    app: octave-fdaparser-webapi
+spec:
+
+  strategy:
+    type: Recreate
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: octave-fdaparser-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-fdaparser-webapi
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
+    spec:
+      imagePullSecrets:
+        - name: acrdevglobal-regcred
+      nodeSelector:
+        np: fdaparser
+      tolerations:
+      - key: "fdaparseronly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      # Spread pods evenly across nodes.
+      # maxSkew:1 means the pod count difference between any two nodes is at most 1.
+      # DoNotSchedule = hard constraint; pods stay Pending rather than bunching up.
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: octave-fdaparser-webapi
+      containers:
+      - name: octave-fdaparser-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-fdaparser-webapi:1.1.14524-2026-02-03-b34a272-1.1 # {"$imagepolicy": "flux-system:octave-fdaparser-webapi:tag"}
+        ports:
+          - containerPort: 5000
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+
+          - name: Metrics__Enabled
+            value: "true"
+
+          - name: Authentication__Enabled
+            value: "false"
+          - name: JwtBearerOptions__Authority
+            value: "http://keycloak-svc:8088/realms/octave-realm"
+          - name: JwtBearerOptions__ValidIssuer
+            value: "http://keycloak-svc:8088/realms/octave-realm"
+          - name: JwtBearerOptions__RequireHttpsMetadata
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuer
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateAudience
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateLifetime
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuerSigningKey
+            value: "true"
+          - name: JwtBearerOptions__TokenValidationParameters__ClockSkew
+            value: "00:00:30"
+          
+          - name: ClaimAuthorizationOptions__LogClaimsForDebug
+            value: "false"
+          - name: ClaimAuthorizationOptions__Policies__ProcessFdaParserPolicy__Type
+            value: "scope"
+          - name: ClaimAuthorizationOptions__Policies__ProcessFdaParserPolicy__Value
+            value: "octave:fdaparser:write"
+          
+          - name: TokenServiceOptions__TokenEndPointUrl
+            value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
+          - name: TokenServiceOptions__ClientId
+            value: "jobqueue-ddss"
+          - name: TokenServiceOptions__ClientSecret
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-secret
+                key: JOBQUEUE_DDSS_CLIENT_SECRET
+          - name: TokenServiceOptions__Scope
+            value: "ddss:data:write" # Using this for now for perf keycloak env.
+
+          - name: TopconDicomWebClientOptions__ServerUrl
+            value: "http://pacs-arc-service:8080/"
+          - name: TopconDicomWebClientOptions__RestApiRootPath
+            value: "dcm4chee-arc/aets/DCM4CHEE/rs"
+          - name: TopconDicomWebClientOptions__Username
+            value: "demo"
+          - name: TopconDicomWebClientOptions__Password
+            value: "demo"
+
+          - name: DdssApiOptions__EntriesBaseUrl
+            value: "http://ddss-api-mock:5000/dds/data/v1/entries/"
+          - name: DdssApiOptions__SchemasBaseUrl
+            value: "http://ddss-api-mock:5000/dds/schema/v1/schemas/"
+
+          - name: SkipDicomValidation
+            value: "true"
+
+          - name: DicomWebClient__Implementation
+            value: "PACS"
+
+          - name: HarmonyApiOptions__BaseUrl
+            value: "http://imagingplatform:10001/api/v2/"
+
+          # Disable cache
+          - name: MemoryCacheSizeLimit
+            value: "1"
+
+          - name: TopconDicomWebClientOptions__CacheDicomInstances
+            value: "false"
+
+          - name: FdaServiceOptions__CacheDicomAndFdaData
+            value: "false"
+
+          - name: HarmonyDicomWebClientOptions__CacheDicomInstances
+            value: "false"
+
+        resources:
+          requests:
+            cpu: "3000m"
+            memory: "9600Mi"
+          limits:
+            cpu: "3000m"
+            memory: "9600Mi"

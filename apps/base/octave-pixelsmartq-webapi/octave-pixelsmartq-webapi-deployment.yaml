@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octave-pixelsmartq-webapi
+  labels:
+    app: octave-pixelsmartq-webapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octave-pixelsmartq-webapi
+  template:
+    metadata:
+      labels:
+        app: octave-pixelsmartq-webapi
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
+    spec:
+      imagePullSecrets:
+        - name: acrdevglobal-regcred
+      containers:
+      - name: octave-pixelsmartq-webapi
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-pixelsmartq-webapi-debug:latest
+        ports:
+          - name: http
+            containerPort: 5000
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Development"
+          - name: ASPNETCORE_URLS
+            value: "http://+:5000"
+
+          - name: Authentication__Enabled
+            value: "false"
+
+          - name: JwtBearerOptions__RequireHttpsMetadata
+            value: "false"
+          - name: JwtBearerOptions__Authority
+            value: "http://keycloak-svc:8088/realms/octave-realm"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuer
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateAudience
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateLifetime
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ValidateIssuerSigningKey
+            value: "false"
+          - name: JwtBearerOptions__TokenValidationParameters__ClockSkew
+            value: "00:00:00"
+
+          - name: ClaimAuthorizationOptions__LogClaimsForDebug
+            value: "true"
+          - name: ClaimAuthorizationOptions__Policies__CreatePixelSmartPolicy__Type
+            value: "scope"
+          - name: ClaimAuthorizationOptions__Policies__CreatePixelSmartPolicy__Value
+            value: "octave:pixelsmart:write"
+
+          - name: ArtemisAmqpOptions__Protocol
+            value: "amqp"
+          - name: ArtemisAmqpOptions__Host
+            value: "activemq-artemis"
+          - name: ArtemisAmqpOptions__Port
+            value: "5672"
+          - name: ArtemisAmqpOptions__Username
+            value: ""
+          - name: ArtemisAmqpOptions__Password
+            value: ""
+          - name: ArtemisAmqpOptions__AddressName
+            value: "PixelSmartQueueAddress"
+          - name: ArtemisAmqpOptions__Durable
+            value: "2"
+
+          - name: PixelSmartProducerServiceOptions__MessageDurable
+            value: "true"

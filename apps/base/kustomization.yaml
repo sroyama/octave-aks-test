@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+# --- Cluster/base plumbing ---
+- namespace.yaml
+- helm-role.yaml
+- helm-repository.yaml
+- tls-es.yaml
+- acrdevglobal-es.yaml
+- default-serviceaccount.yaml
+
+# --- Auth ---
+- oauth2-proxy
+
+# --- Stateful / supporting services ---
+- keycloak
+- pacs
+- mongodb
+- activemq-artemis
+- artemis-proxy
+
+# --- Mocks (real .NET mocks ported from the local docker-compose) ---
+- dotnet-harmony-api-mock
+- ddss-api-mock
+- harmony-ui-mock
+
+# --- Octave application services ---
+- import-dcm-files
+- octave-appdata-webapi
+- octave-client
+- octave-fdaparser-webapi
+- octave-pixelsmart-generation-webapi
+- octave-pixelsmartq-webapi
+- octave-rdb-webapi
+- octave-shadowgram-webapi
+- octave-webapi

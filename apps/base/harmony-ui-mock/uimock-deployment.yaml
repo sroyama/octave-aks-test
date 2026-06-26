@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harmony-ui-mock
+  labels:
+    app: harmony-ui-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harmony-ui-mock
+  template:
+    metadata:
+      labels:
+        app: harmony-ui-mock
+    spec:
+      containers:
+      - name: harmony-ui-mock
+        image: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/harmony-ui-mock:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/nginx/html/config.json
+          subPath: config.json
+      volumes:
+      - name: config-volume
+        configMap:
+          name: harmony-ui-mock-config
