@@ -31,6 +31,14 @@ spec:
             value: "http://keycloak:8088/realms/octave-realm"
           - name: Authentication__ValidIssuer
             value: "http://keycloak:8088/realms/octave-realm"
+          # Client-credentials token used for the octave-rdb-webapi gRPC call
+          # (TokenServiceOptions). The appsettings default points at
+          # localhost:8088/docker-octave-realm, so it must be redirected to the
+          # in-cluster Keycloak service + realm or the RDB call fails with
+          # "Connection refused (localhost:8088)". ClientId/Secret default to
+          # octave-main / octave-main-secret, matching the Keycloak init.
+          - name: TokenServiceOptions__TokenEndPointUrl
+            value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
           - name: HarmonyApiTokenServiceOptions__TokenEndPointUrl
             value: "http://keycloak-svc:8088/realms/octave-realm/protocol/openid-connect/token"
           - name: HarmonyApiTokenServiceOptions__ClientId
