@@ -289,18 +289,37 @@ This installs the Flux (`microsoft.flux`) extension automatically if it's not pr
 
 ---
 
-## 9. Point DNS at the HAProxy load balancer
+## 9. Create a static public IP and point DNS at the HAProxy load balancer
 
-After `infrastructure` reconciles, read the external IP and create the DNS A record
-`octave-dev.topcon.app → <IP>`:
+Pre-create a **Standard**, **Static** public IP in the cluster **node resource group**
+(`MC_*`). Putting it there means the cluster's own identity already owns it — no role
+assignment is required (a custom RG would need `Network Contributor` granted to the cluster
+identity). The HAProxy service binds it by name via the
+`service.beta.kubernetes.io/azure-pip-name: octave-dev-pip` annotation already set in
+`infrastructure/haproxy-ingress/helmrelease.yaml`.
+
+```bash
+NODE_RG=$(az aks show -g <rg-octave-dev> -n <aks-octave-dev> --query nodeResourceGroup -o tsv)
+LOC=$(az aks show -g <rg-octave-dev> -n <aks-octave-dev> --query location -o tsv)
+
+# Standard SKU + Static is required to match the AKS Standard load balancer
+az network public-ip create -g $NODE_RG -n octave-dev-pip \
+  --sku Standard --allocation-method Static --version IPv4
+
+# Read the address to register as the DNS A record for octave-dev.topcon.app
+az network public-ip show -g $NODE_RG -n octave-dev-pip --query ipAddress -o tsv
+```
+
+> If you rename the public IP, update the `azure-pip-name` annotation to match. The IP **must**
+> be Standard SKU and live in the node resource group for the name-based binding to work.
+
+After `infrastructure` reconciles, confirm HAProxy picked up the static IP (it should equal the
+address above), then create the DNS A record `octave-dev.topcon.app → <IP>`:
 
 ```bash
 kubectl get svc -n oct-gitops-ns haproxy-ingress \
   -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
-
-For a static IP, pre-create a public IP in the node resource group and set
-`controller.service.loadBalancerIP` in `infrastructure/haproxy-ingress/helmrelease.yaml`.
 
 ---
 

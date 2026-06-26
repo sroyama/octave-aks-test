@@ -33,12 +33,14 @@ spec:
         kubernetes.io/os: linux
       service:
         type: LoadBalancer
-        # loadBalancerIP is intentionally omitted; patch it in the overlay if a
-        # static IP is required.
+        # Static public IP is bound by name via the azure-pip-name annotation
+        # below. The IP must be a Standard-SKU, Static public IP pre-created in
+        # the cluster node resource group (MC_*). See AZURE-SETUP.md step 9.
         externalTrafficPolicy: Local
         annotations:
           service.beta.kubernetes.io/azure-load-balancer-internal: "false"
           service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+          service.beta.kubernetes.io/azure-pip-name: octave-dev-pip
       config:
         # Enable HAProxy to honour X-Forwarded-* headers from the Azure LB.
         forwarded-for: "add"
