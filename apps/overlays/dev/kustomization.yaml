@@ -80,8 +80,11 @@ patches:
   # octave-rdb-webapi's appsettings.json defines a gRPC Kestrel endpoint on
   # https://0.0.0.0:7180 with no certificate, so the host crashes on startup
   # ("Unable to configure HTTPS endpoint. No server certificate was specified").
-  # Rebind it to HTTP/2 cleartext (h2c) — no cert needed, gRPC still works
-  # in-cluster.
+  # Because Kestrel:Endpoints is set in appsettings, Kestrel IGNORES
+  # ASPNETCORE_URLS (http://+:5000) entirely, so nothing listens on :5000 — yet
+  # the Service exposes 5000 and octave-webapi dials octave-rdb-webapi-service:5000.
+  # Rebind the gRPC endpoint to HTTP/2 cleartext (h2c) on :5000 so it has no cert
+  # requirement AND lines up with the Service port that octave-webapi calls.
   - target:
       kind: Deployment
       name: octave-rdb-webapi
@@ -90,7 +93,7 @@ patches:
         path: /spec/template/spec/containers/0/env/-
         value:
           name: Kestrel__Endpoints__Grpc__Url
-          value: "http://0.0.0.0:7180"
+          value: "http://0.0.0.0:5000"
 
 # Image pins for the dev/review cluster.
 #
