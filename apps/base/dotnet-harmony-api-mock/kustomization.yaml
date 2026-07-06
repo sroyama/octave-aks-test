@@ -6,7 +6,7 @@ namespace: octave
 resources:
 - deployment.yaml
 - service.yaml
-- ingress.yaml
+- fileservice-ingress.yaml
 
 labels:
   - pairs:
