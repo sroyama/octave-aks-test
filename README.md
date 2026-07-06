@@ -111,3 +111,56 @@ All three should render without errors.
   `apps/overlays/dev/kustomization.yaml` (`images:`) when a frozen build is required.
 - HAProxy external-auth annotation values should be confirmed against the deployed
   haproxy-ingress chart version.
+
+## Kubectl Commands To Roll Out New Images
+
+- Log in to `acrdev01global-hudngze7h7hcd6gw`.
+
+```
+az acr login --name acrdev01global-hudngze7h7hcd6gw
+```
+
+- Roll out a single workload and restart its pod.
+```
+kubectl -n octave rollout restart deployment <deployment-name>
+```
+`<deployment-name>` is something like `dotnet-harmony-api-mock` or `octave-webapi`.
+
+- Roll out and restart all deployments.
+```
+kubectl -n octave rollout restart deployment --all
+kubectl -n octave rollout restart statefulset --all
+kubectl -n octave rollout restart daemonset --all
+```
+
+- Verify the rollout.
+```
+kubectl -n octave rollout status deployment/<deployment-name>
+kubectl -n octave get pods
+```
+
+- List deployments and show image details.
+```
+kubectl -n octave get deployments
+kubectl -n octave get deployment dotnet-harmony-api-mock -o jsonpath='{.spec.template.spec.containers[*].image}{"\n"}'
+kubectl -n octave get pods -l app=dotnet-harmony-api-mock -o jsonpath='{range .items[]}{.metadata.name}{"\t"}{range .status.containerStatuses[]}{.name}{"\t"}{.image}{"\t"}{.imageID}{"\t"}{.state.running.startedAt}{"\n"}{end}{end}'
+```
+- Show ACR-side timestamps and digests for `latest`.
+```
+az acr repository show-tags --name acrdev01global-hudngze7h7hcd6gw --repository octave/octave-mockharmonyapi-webapi --detail --orderby time_desc -o table
+```
+
+## Port Forward
+
+- Port-forward dcm4chee.
+
+```
+kubectl port-forward -n octave svc/pacs-arc-service 11112:11112 8080:8080
+```
+Then connect to dcm4chee UI: http://localhost:8080/dcm4chee-arc/ui2
+
+- Port-forward the Mock Harmony API.
+```
+kubectl port-forward -n octave svc/dotnet-harmony-api-mock 5000:5000
+```
+Swagger URL: http://localhost:5000/swagger/index.html
