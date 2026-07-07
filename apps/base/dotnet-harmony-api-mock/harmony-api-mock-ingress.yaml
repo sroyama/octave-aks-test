@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: dotnet-harmony-api-mock-fileservice-ingress
+  name: harmony-api-mock-ingress
 spec:
   ingressClassName: haproxy
   rules:
@@ -9,6 +9,13 @@ spec:
     http:
       paths:
       - path: /fileservice
+        pathType: Prefix
+        backend:
+          service:
+            name: dotnet-harmony-api-mock
+            port:
+              number: 5000
+      - path: /harmony
         pathType: Prefix
         backend:
           service:

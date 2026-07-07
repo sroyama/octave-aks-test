@@ -189,7 +189,7 @@ patches:
 
   - target:
       kind: Ingress
-      name: dotnet-harmony-api-mock-fileservice-ingress
+      name: harmony-api-mock-ingress
     patch: |
       - op: replace
         path: /spec/rules/0/host
