@@ -1,0 +1,9 @@
+{
+  "harmonyApiUrl": "https://octave-dev.topcon.app/harmony/api/v2",
+  "octaveUrlBase": "https://octave-dev.topcon.app/octave/",
+  "patientApiUrl": "https://octave-dev.topcon.app/harmony/api/v2/patients",
+  "authority": "http://not-used-in-aks:8088/realms/docker-octave-realm",
+  "clientId": "octave-harmony-ui-mock",
+  "redirectUri": "https://octave-dev.topcon.app/",
+  "enableAuth": false
+}

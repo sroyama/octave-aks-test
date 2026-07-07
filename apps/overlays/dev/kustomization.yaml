@@ -16,7 +16,44 @@ resources:
 #   - shrink the perf-sized CPU/memory requests to dev-sized values
 #   - run a single pixelsmart replica (the HPA pins 12 for load testing)
 # Tolerations are left in place; they are harmless on untainted nodes.
+
+# Hostname patches are defined below (in the single patches: block after configMapGenerator).
+# This prevents duplicate patches: keys, which would cause earlier patches to be ignored.
+
+# Image pins for the dev/review cluster.
+#
+# The base manifests reference ":latest" tags from the dev ACR so the cluster is
+# easy to update. Pin specific, reproducible tags here when you need a frozen
+# build. Example (uncomment + set real tags):
+#
+# images:
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-webapi-debug
+#     newTag: 1.1.xxxxx-main
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockharmonyapi-webapi
+#     newTag: latest
+#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockddss-webapi
+#     newTag: latest
+
+# ---------------------------------------------------------------------------
+# Cluster-specific: hostname
+#
+# The base manifests use "octave.example.com" as a placeholder.
+# The patches below inject the real dev hostname into every Ingress host/TLS
+# field, every auth-signin annotation, and every env var that contains the URL.
+# When adding a new cluster, copy this section to the new overlay and replace
+# the hostname throughout.
+# ---------------------------------------------------------------------------
+
+configMapGenerator:
+# harmony-ui-mock serves a browser-side config.json whose URLs must point at
+# this cluster's hostname.  Each overlay owns its own copy of this file.
+- name: harmony-ui-mock-config
+  files:
+  - config.json=harmony-ui-mock-config.json
+
 patches:
+  # --- Performance resource downsizing (perf services run on generic nodes in dev) ---
+  
   # Only one pixelsmart pod in dev (base HPA pins min=max=12 for perf runs).
   - target:
       kind: HorizontalPodAutoscaler
@@ -78,13 +115,8 @@ patches:
             memory: "2Gi"
 
   # octave-rdb-webapi's appsettings.json defines a gRPC Kestrel endpoint on
-  # https://0.0.0.0:7180 with no certificate, so the host crashes on startup
-  # ("Unable to configure HTTPS endpoint. No server certificate was specified").
-  # Because Kestrel:Endpoints is set in appsettings, Kestrel IGNORES
-  # ASPNETCORE_URLS (http://+:5000) entirely, so nothing listens on :5000 — yet
-  # the Service exposes 5000 and octave-webapi dials octave-rdb-webapi-service:5000.
-  # Rebind the gRPC endpoint to HTTP/2 cleartext (h2c) on :5000 so it has no cert
-  # requirement AND lines up with the Service port that octave-webapi calls.
+  # https://0.0.0.0:7180 with no certificate, so the host crashes on startup.
+  # Rebind the gRPC endpoint to HTTP/2 cleartext (h2c) on :5000.
   - target:
       kind: Deployment
       name: octave-rdb-webapi
@@ -95,16 +127,89 @@ patches:
           name: Kestrel__Endpoints__Grpc__Url
           value: "http://0.0.0.0:5000"
 
-# Image pins for the dev/review cluster.
-#
-# The base manifests reference ":latest" tags from the dev ACR so the cluster is
-# easy to update. Pin specific, reproducible tags here when you need a frozen
-# build. Example (uncomment + set real tags):
-#
-# images:
-#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-webapi-debug
-#     newTag: 1.1.xxxxx-main
-#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockharmonyapi-webapi
-#     newTag: latest
-#   - name: acrdev01global-hudngze7h7hcd6gw.azurecr.io/octave/octave-mockddss-webapi
-#     newTag: latest
+  # --- Hostname patches (cluster-specific: octave-dev.topcon.app) ---
+  # The base manifests use "octave.example.com" as a placeholder.
+  # Patches below inject the real dev hostname into every Ingress host/TLS field,
+  # every auth-signin annotation, and every env var that contains a URL.
+  # When adding a new cluster (e.g., overlays/test), copy this section and
+  # replace the hostname throughout.
+  
+  - target:
+      kind: Ingress
+      name: octave-client-ingress
+    patch: |
+      - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
+        value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
+      - op: replace
+        path: /spec/rules/0/host
+        value: octave-dev.topcon.app
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: octave-dev.topcon.app
+
+  - target:
+      kind: Ingress
+      name: octave-webapi-ingress
+    patch: |
+      - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
+        value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
+      - op: replace
+        path: /spec/rules/0/host
+        value: octave-dev.topcon.app
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: octave-dev.topcon.app
+
+  - target:
+      kind: Ingress
+      name: harmony-ui-mock-ingress
+    patch: |
+      - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
+        value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
+      - op: replace
+        path: /spec/rules/0/host
+        value: octave-dev.topcon.app
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: octave-dev.topcon.app
+
+  - target:
+      kind: Ingress
+      name: oauth2-proxy-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: octave-dev.topcon.app
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: octave-dev.topcon.app
+
+  - target:
+      kind: Ingress
+      name: dotnet-harmony-api-mock-fileservice-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: octave-dev.topcon.app
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: octave-dev.topcon.app
+
+  - target:
+      kind: ConfigMap
+      name: oauth2-proxy-config
+    patch: |
+      - op: replace
+        path: /data/OAUTH2_PROXY_REDIRECT_URL
+        value: "https://octave-dev.topcon.app/oauth2/callback"
+
+  - target:
+      kind: Deployment
+      name: octave-client
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://octave-dev.topcon.app/octave"

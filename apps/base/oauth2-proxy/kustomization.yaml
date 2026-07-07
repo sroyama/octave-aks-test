@@ -22,7 +22,7 @@ configMapGenerator:
   - OAUTH2_PROXY_AZURE_TENANT=96c2c3ba-19d3-47b6-ba0b-8f7471bd1f14
   # Restrict access to topcon.com accounts only (per spec).
   - OAUTH2_PROXY_EMAIL_DOMAINS=topcon.com
-  - OAUTH2_PROXY_REDIRECT_URL=https://octave-dev.topcon.app/oauth2/callback
+  - OAUTH2_PROXY_REDIRECT_URL=https://octave.example.com/oauth2/callback
   - OAUTH2_PROXY_COOKIE_SECURE=true
   - OAUTH2_PROXY_COOKIE_EXPIRE=0
   - OAUTH2_PROXY_UPSTREAMS=file:///dev/null

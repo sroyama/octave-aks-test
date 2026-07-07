@@ -8,10 +8,9 @@ resources:
 - uimock-service.yaml
 - uimock-ingress.yaml
 
-configMapGenerator:
-- name: harmony-ui-mock-config
-  files:
-  - config.json=./data/config.json
+# NOTE: harmony-ui-mock-config ConfigMap is NOT generated here.
+# Each overlay provides it via its own configMapGenerator so the
+# hostname and URLs remain cluster-specific.
 
 labels:
   - pairs:

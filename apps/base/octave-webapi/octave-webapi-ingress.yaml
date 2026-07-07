@@ -4,14 +4,14 @@ metadata:
   name: octave-webapi-ingress
   annotations:
     haproxy-ingress.github.io/auth-url: "http://oauth2-proxy.octave.svc.cluster.local:4180/oauth2/auth"
-    haproxy-ingress.github.io/auth-signin: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
+    haproxy-ingress.github.io/auth-signin: "https://octave.example.com/oauth2/start?rd=%[path]"
     haproxy-ingress.github.io/auth-headers-succeed: "x-auth-request-user,x-auth-request-email"
     # /octave/api/<x>  ->  /api/<x> on the backend.
     haproxy-ingress.github.io/rewrite-target: /api
 spec:
   ingressClassName: haproxy
   rules:
-  - host: octave-dev.topcon.app
+  - host: octave.example.com
     http:
       paths:
       - path: /octave/api
@@ -23,5 +23,5 @@ spec:
               number: 5000
   tls:
   - hosts:
-    - octave-dev.topcon.app
+    - octave.example.com
     secretName: octave-topconapp-tls

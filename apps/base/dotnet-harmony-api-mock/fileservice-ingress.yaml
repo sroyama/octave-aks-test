@@ -5,7 +5,7 @@ metadata:
 spec:
   ingressClassName: haproxy
   rules:
-  - host: octave-dev.topcon.app
+  - host: octave.example.com
     http:
       paths:
       - path: /fileservice
@@ -17,5 +17,5 @@ spec:
               number: 5000
   tls:
   - hosts:
-    - octave-dev.topcon.app
+    - octave.example.com
     secretName: octave-topconapp-tls

@@ -21,7 +21,7 @@ spec:
           - containerPort: 80
         env:
           - name: OCTAVE_API_URL
-            value: "https://octave-dev.topcon.app/octave"
+            value: "https://octave.example.com/octave"
           - name: BASE_HREF
             value: "/octave/"
           # Demo environment doesn't have auth, it uses oauth2-proxy outside of the app.
