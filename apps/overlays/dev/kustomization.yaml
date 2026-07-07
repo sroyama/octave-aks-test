@@ -4,7 +4,7 @@ kind: Kustomization
 commonAnnotations:
   octave-overlay: dev
 
-namespace: octave-dev
+namespace: octave-aks-test
 
 resources:
   - ../../base
@@ -62,7 +62,7 @@ patches:
     patch: |
       - op: replace
         path: /metadata/name
-        value: octave-dev
+        value: octave-aks-test
 
   # SecretStore (external-secrets) also needs explicit namespace override.
   - target:
@@ -70,7 +70,7 @@ patches:
     patch: |
       - op: replace
         path: /metadata/namespace
-        value: octave-dev
+        value: octave-aks-test
 
   # --- Performance resource downsizing (perf services run on generic nodes in dev) ---
   
