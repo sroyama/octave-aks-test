@@ -48,6 +48,7 @@ configMapGenerator:
 # harmony-ui-mock serves a browser-side config.json whose URLs must point at
 # this cluster's hostname.  Each overlay owns its own copy of this file.
 - name: harmony-ui-mock-config
+  namespace: octave
   files:
   - config.json=harmony-ui-mock-config.json
 
