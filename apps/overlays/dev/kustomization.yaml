@@ -159,6 +159,9 @@ patches:
       name: octave-client-ingress
     patch: |
       - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-url
+        value: "http://oauth2-proxy.octave-aks-test.svc.cluster.local:4180/oauth2/auth"
+      - op: replace
         path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
         value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
       - op: replace
@@ -173,6 +176,9 @@ patches:
       name: octave-webapi-ingress
     patch: |
       - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-url
+        value: "http://oauth2-proxy.octave-aks-test.svc.cluster.local:4180/oauth2/auth"
+      - op: replace
         path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
         value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
       - op: replace
@@ -186,6 +192,9 @@ patches:
       kind: Ingress
       name: harmony-ui-mock-ingress
     patch: |
+      - op: replace
+        path: /metadata/annotations/haproxy-ingress.github.io~1auth-url
+        value: "http://oauth2-proxy.octave-aks-test.svc.cluster.local:4180/oauth2/auth"
       - op: replace
         path: /metadata/annotations/haproxy-ingress.github.io~1auth-signin
         value: "https://octave-dev.topcon.app/oauth2/start?rd=%[path]"
